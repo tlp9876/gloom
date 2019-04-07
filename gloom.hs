@@ -3,12 +3,9 @@ import Control.Monad
 import Control.Monad.Random
 import System.Random.Shuffle
 
+-- deck defs
 type Card = Maybe Int
 type Deck = [Card]
-
-mean :: (Real a, Fractional b) => [a]-> b
-mean x = realToFrac (sum x) / (genericLength x)
-
 
 baseDeck :: [Int]
 baseDeck = [-2,-1,-1,-1,-1,-1,0,0,0,0,0,1,1,1,1,1,2]
@@ -16,27 +13,87 @@ baseDeck = [-2,-1,-1,-1,-1,-1,0,0,0,0,0,1,1,1,1,1,2]
 fullDeck :: Deck
 fullDeck = map Just baseDeck ++ [Nothing, Nothing]
 
-plus3 :: Deck -> Deck
-plus3 x = x ++ [Just 3]
+-- helpers
+mean :: (Real a, Fractional b) => [a]-> b
+mean x = realToFrac (sum x) / (genericLength x)
 
+-- perks
+addCard :: Card -> Int -> Deck -> Deck
+addCard c 0 deck = deck
+addCard c n deck = [c] ++ addCard c (n-1) deck
 
-removecard :: Card -> Int -> Deck -> Deck
-removecard c 0 xs = xs
-removecard c n [] = error "not enough"
-removecard c n (x:xs) = if c == x
-  then removecard c (n-1) xs
-  else [x] ++ removecard c n xs
+addNumberCard :: Int -> Int -> Deck -> Deck
+addNumberCard c n = addCard (Just c) n 
 
+removeCard :: Card -> Int -> Deck -> Deck
+removeCard c 0 xs = xs
+removeCard c n [] = error "not enough"
+removeCard c n (x:xs) = if c == x
+  then removeCard c (n-1) xs
+  else [x] ++ removeCard c n xs
 
-removeminus1s :: Int -> Deck -> Deck
-removeminus1s = removecard (Just (-1))
+removeNumberCard :: Int -> Int -> Deck -> Deck
+removeNumberCard c n = removeCard (Just c) n
 
-replaceminus1plus1 :: Deck -> Deck
-replaceminus1plus1 xs = (removeminus1s 1 xs) ++ [Just 1]
+replaceCard :: Card -> Int -> Card -> Int -> Deck -> Deck
+replaceCard c1 n1 c2 n2 deck = addCard c2 n2 (removeCard c1 n1 deck)
 
+replaceNumberCard :: Int -> Int -> Int -> Int -> Deck -> Deck
+replaceNumberCard c1 n1 c2 n2 = replaceCard (Just c1) n1 (Just c2) n2
 
-remove3minus1s :: Deck -> Deck
-remove3minus1s = removeminus1s 3
+perk_R1M1_A1P1 = replaceNumberCard (-1) 1 1 1
+perk_R1Z_A1P2 = replaceNumberCard 0 1 2 1
+perk_R1Z_A2P1 = replaceNumberCard 0 2 1 2
+perk_R2P1_A2P2 = replaceNumberCard 1 2 2 2
+perk_R1M2_A1Z = replaceNumberCard (-2) 1 0 1
+perk_R2M1 = removeNumberCard (-1) 2
+perk_R4Z = removeNumberCard 0 4
+perk_A2P1 = addNumberCard 1 2
+perk_A1P3 = addNumberCard 3 1
+perk_A1M2_A2P2 deck = addNumberCard (-2) 1 (addNumberCard 2 2 deck)
+
+perks_brute = [
+    perk_R2M1,
+    perk_R1M1_A1P1,
+    perk_A2P1, perk_A2P1,
+    perk_A1P3
+  ]
+
+perks_tinkerer = [
+    perk_R2M1, perk_R2M1,
+    perk_R1M2_A1Z,
+    perk_A2P1,
+    perk_A1P3
+  ]
+
+perks_spellweaver = [
+    perk_R4Z,
+    perk_R1M1_A1P1, perk_R1M1_A1P1,
+    perk_A2P1, perk_A2P1
+  ]
+
+perks_scoundrel = [
+    perk_R2M1, perk_R2M1,
+    perk_R4Z,
+    perk_R1M2_A1Z,
+    perk_R1M1_A1P1,
+    perk_R1Z_A1P2, perk_R1Z_A1P2
+  ]
+
+perks_cragheart = [
+    perk_R4Z,
+    perk_R1M1_A1P1, perk_R1M1_A1P1, perk_R1M1_A1P1,
+    perk_A1M2_A2P2
+  ]
+
+perks_mindthief = [
+    perk_R2M1,
+    perk_R4Z,
+    perk_R2P1_A2P2,
+    perk_R1M2_A1Z
+  ]
+
+-- calculation
 
 manyDecks :: (MonadRandom m) => Int -> Deck -> m [Deck]
 manyDecks n deck = sequence (map shuffleM (replicate n deck))
