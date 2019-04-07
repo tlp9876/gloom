@@ -6,6 +6,7 @@ import System.Random.Shuffle
 -- deck defs
 type Card = Maybe Int
 type Deck = [Card]
+type Perk = (String, Deck -> Deck) -- name, and transform
 
 baseDeck :: [Int]
 baseDeck = [-2,-1,-1,-1,-1,-1,0,0,0,0,0,1,1,1,1,1,2]
@@ -25,6 +26,8 @@ addCard c n deck = [c] ++ addCard c (n-1) deck
 addNumberCard :: Int -> Int -> Deck -> Deck
 addNumberCard c n = addCard (Just c) n 
 
+add2NumberCards c1 n1 c2 n2 deck = addNumberCard c1 n2 (addNumberCard c2 n2 deck)
+
 removeCard :: Card -> Int -> Deck -> Deck
 removeCard c 0 xs = xs
 removeCard c n [] = error "not enough"
@@ -41,16 +44,16 @@ replaceCard c1 n1 c2 n2 deck = addCard c2 n2 (removeCard c1 n1 deck)
 replaceNumberCard :: Int -> Int -> Int -> Int -> Deck -> Deck
 replaceNumberCard c1 n1 c2 n2 = replaceCard (Just c1) n1 (Just c2) n2
 
-perk_R1M1_A1P1 = replaceNumberCard (-1) 1 1 1
-perk_R1Z_A1P2 = replaceNumberCard 0 1 2 1
-perk_R1Z_A2P1 = replaceNumberCard 0 2 1 2
-perk_R2P1_A2P2 = replaceNumberCard 1 2 2 2
-perk_R1M2_A1Z = replaceNumberCard (-2) 1 0 1
-perk_R2M1 = removeNumberCard (-1) 2
-perk_R4Z = removeNumberCard 0 4
-perk_A2P1 = addNumberCard 1 2
-perk_A1P3 = addNumberCard 3 1
-perk_A1M2_A2P2 deck = addNumberCard (-2) 1 (addNumberCard 2 2 deck)
+perk_R1M1_A1P1 = ("Remove 1 -1, add 1 +1", replaceNumberCard (-1) 1 1 1)
+perk_R1Z_A1P2 = ("Remove 1 zero, add 1 +1", replaceNumberCard 0 1 2 1)
+perk_R1Z_A2P1 = ("Remove 1 zero, add 2 +1s", replaceNumberCard 0 2 1 2)
+perk_R2P1_A2P2 = ("Remove 2 +1s, add 2 +2s", replaceNumberCard 1 2 2 2)
+perk_R1M2_A1Z = ("Remove 2 -1s, add 1 zero", replaceNumberCard (-2) 1 0 1)
+perk_R2M1 = ("Remove 2 -1s", removeNumberCard (-1) 2)
+perk_R4Z = ("Remove 4 zeros", removeNumberCard 0 4)
+perk_A2P1 = ("Add 2 +1s", addNumberCard 1 2)
+perk_A1P3 = ("Add 1 +3", addNumberCard 3 1)
+perk_A1M2_A2P2 = ("Add 1 -2 and 2 +2s", add2NumberCards (-2) 1 2 2)
 
 perks_brute = [
     perk_R2M1,
@@ -123,4 +126,7 @@ sample size rounds deck = do {
 
 sampleMean :: (MonadRandom m, Fractional b) => Int -> Int -> Deck -> m b
 sampleMean size rounds deck = (liftM mean) (sample size rounds deck)
+
+
+
 
